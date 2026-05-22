@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DUCAT VIKASPURI | Attendance Form</title>
+    <title>DUCAT {{ active_branch|upper }} | Attendance Form</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
@@ -164,7 +164,7 @@
     </div>
     <div class="container">
         <div class="header">
-            <h1>DUCAT VIKASPURI</h1>
+            <h1>DUCAT {{ active_branch|upper }}</h1>
             <p><strong>ATTENDANCE FORM</strong><br>Please fill out the following details to mark your attendance. All fields marked with an asterisk (*) are required.</p>
         </div>
 
@@ -183,6 +183,7 @@
 
         <form method="POST">
             {% csrf_token %}
+            <input type="hidden" name="branch" value="{{ active_branch }}">
             
             <div class="form-group">
                 <label>Name <span>*</span></label>
@@ -193,9 +194,9 @@
             </div>
 
             <div class="form-group">
-                <label>Student ID <span>*</span></label>
+                <label>Student ID <span>*</span> <span style="color: #94A3B8; font-size: 0.7rem; font-weight: normal; text-transform: none; letter-spacing: normal;">(type only last 4 digits)</span></label>
                 <div class="input-wrapper">
-                    <input type="text" name="student_id" id="id_student_id" class="form-control" placeholder="Enter ID (e.g. 123/24)" required>
+                    <input type="text" name="student_id" id="id_student_id" class="form-control" placeholder="e.g. 1234" maxlength="4" required>
                     <i class="fa-solid fa-id-card"></i>
                 </div>
                 <div id="id_status_msg" style="font-size: 0.75rem; margin-top: 5px; font-weight: 700; color: var(--accent);"></div>
@@ -361,16 +362,23 @@
         const statusMsg = document.getElementById('id_status_msg');
 
         function checkStudent() {
-            const sid = sidInput.value.trim();
-            if (sid.length >= 2) {
+            const sid = sidInput.value;
+            console.log("-----------------",sid)
+            if (sid.length >= 3) {
+                console.log(sid.length)
                 statusMsg.innerText = 'Searching student...';
                 fetch(`/feedback/get-student/?sid=${sid}`)
+                     
                     .then(r => r.json())
                     .then(data => {
+                        //console.log(data.)
                         if (data.status === 'success') {
-                            nameInput.value = data.name || '';
-                            statusMsg.style.color = '#15803D';
-                            statusMsg.innerText = '✅ Student details found!';
+                            if(sid == data.id){
+                                nameInput.value = data.name || '';
+                                statusMsg.style.color = '#15803D';
+                                statusMsg.innerText = '✅ Student details found!';
+                                console.log(statusMsg.innerText)
+                            }
                             
                             // 1. Auto-select trainer and trigger change
                             if (data.trainer_name) {

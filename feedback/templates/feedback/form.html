@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ducat Feedback - Vikaspuri</title>
+    <title>Ducat Feedback - {{ active_branch }}</title>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
@@ -35,7 +35,7 @@
 <body>
     <div class="container">
         <header class="header">
-            <div class="ducat-logo">DUCAT <span>School of Ai</span></div>
+            <div class="ducat-logo">DUCAT <span>{{ active_branch }}</span></div>
         </header>
 
         {% if messages %}
@@ -50,8 +50,8 @@
             </p>
 
             <div class="form-group">
-                <label>Student ID *</label>
-                <input type="text" name="student_id" id="id_student_id" class="input-control" required placeholder="Enter Registration ID (e.g. 123/24)">
+                <label>Student ID <span>*</span></label>
+                <input type="text" name="student_id" id="id_student_id" class="input-control" placeholder="Enter Registration ID (e.g. 123/24)" required>
                 <div id="id_status_msg" style="font-size: 0.75rem; margin-top: 5px; font-weight: 700;"></div>
             </div>
 
@@ -67,10 +67,10 @@
             </div>
 
             <div class="grid-row">
-                <div class="form-group"><label>Phone</label><input type="text" name="phone" id="id_phone" class="input-control"></div>
+                <div class="form-group"><label>Phone</label><input type="text" name="phone" id="id_phone" class="input-control" placeholder="9876543210" maxlength="10" minlength="10" pattern="\d{10}" title="Please enter exactly 10 digits" oninput="this.value = this.value.replace(/[^0-9]/g, '').slice(0,10)"></div>
                 <div class="form-group">
                     <label>Training Branch</label>
-                    <input type="text" name="branch" value="Vikaspuri" class="input-control" readonly style="background: #f1f5f9; cursor: not-allowed; font-weight:700;">
+                    <input type="text" name="branch" value="{{ active_branch }}" class="input-control" readonly style="background: #f1f5f9; cursor: not-allowed; font-weight:700;">
                 </div>
             </div>
 
@@ -104,22 +104,31 @@
             </div>
 
             <input type="hidden" name="batch_timing" id="id_batch_timing">
-            <input type="hidden" name="batch_mode" id="id_batch_mode">
+            <input type="hidden" name="batch_name" id="id_batch_name">
 
-            <div class="form-group">
-                <label>Training Phase *</label>
-                {% if not selected_phase %}
-                <select name="phase" class="input-control" required id="phase_select" onchange="checkStatus()">
-                    <option value="P-1">P-1 (Orientation & Basics)</option>
-                    <option value="P-2">P-2 (Core Implementation)</option>
-                    <option value="P-3">P-3 (Mid-Project Assessment)</option>
-                    <option value="P-4">P-4 (Advanced Concepts)</option>
-                    <option value="P-5">P-5 (Final Submission/Project)</option>
-                </select>
-                {% else %}
-                <input type="text" class="input-control" readonly style="background: #f1f5f9; cursor: not-allowed; font-weight:700;" value="{{ phase_label }}">
-                <input type="hidden" name="phase" value="{{ selected_phase }}" id="phase_select">
-                {% endif %}
+            <div class="grid-row">
+                <div class="form-group">
+                    <label>Training Phase *</label>
+                    {% if not selected_phase %}
+                    <select name="phase" class="input-control" required id="phase_select" onchange="checkStatus()">
+                        <option value="P-1">P-1 (Orientation & Basics)</option>
+                        <option value="P-2">P-2 (Core Implementation)</option>
+                        <option value="P-3">P-3 (Mid-Project Assessment)</option>
+                        <option value="P-4">P-4 (Advanced Concepts)</option>
+                        <option value="P-5">P-5 (Final Submission/Project)</option>
+                    </select>
+                    {% else %}
+                    <input type="text" class="input-control" readonly style="background: #f1f5f9; cursor: not-allowed; font-weight:700;" value="{{ phase_label }}">
+                    <input type="hidden" name="phase" value="{{ selected_phase }}" id="phase_select">
+                    {% endif %}
+                </div>
+                <div class="form-group">
+                    <label>Training Mode *</label>
+                    <select name="batch_mode" id="id_batch_mode" class="input-control" required>
+                        <option value="Offline">Offline (Classroom)</option>
+                        <option value="Online">Online (Live Class)</option>
+                    </select>
+                </div>
             </div>
 
             <div style="margin: 40px 0 20px; font-weight: 800; color: var(--primary); border-left: 4px solid var(--sky); padding-left: 15px;">QUALITY QUESTIONS</div>
@@ -162,7 +171,7 @@
                 allBatches[selectedTech].forEach(b => {
                     const opt = document.createElement('option');
                     opt.value = encodeURIComponent(JSON.stringify(b));
-                    opt.textContent = `${b.trainer} | ${b.timing} (${b.type})`;
+                    opt.textContent = `${b.batch_name} (${b.type}) | ${b.timing}`;
                     batchSelect.appendChild(opt);
                     
                     if (autoSelectedBatchData && 
@@ -187,6 +196,7 @@
                     trainerInput.value = b.trainer;
                     batchTypeInput.value = b.type;
                     batchTimingInput.value = b.timing;
+                    if (document.getElementById('id_batch_name')) document.getElementById('id_batch_name').value = b.batch_name;
                     if (batchModeInput) batchModeInput.value = b.type.toLowerCase().includes('online') ? 'Online' : 'Offline';
                     document.getElementById('batch_info_display').innerText = `✅ Assigned: ${b.trainer} - ${b.timing}`;
                 } catch(e) { console.error(e); }
@@ -194,6 +204,7 @@
                 trainerInput.value = '';
                 batchTypeInput.value = '';
                 batchTimingInput.value = '';
+                if (document.getElementById('id_batch_name')) document.getElementById('id_batch_name').value = '';
                 document.getElementById('batch_info_display').innerText = '';
             }
         }
@@ -278,8 +289,31 @@
                 document.getElementById('wordcount').style.color = 'inherit';
             }
         }
+        function toggleSuggestionsRequired() {
+            const ratings = document.querySelectorAll('input[type="radio"]:checked');
+            const suggestionsField = document.getElementById('id_suggestions');
+            let needsComment = false;
+            
+            ratings.forEach(radio => {
+                if (parseInt(radio.value) < 5) {
+                    needsComment = true;
+                }
+            });
+            
+            if (needsComment) {
+                suggestionsField.required = true;
+                suggestionsField.placeholder = "Please explain the reason for the lower rating (Required)*";
+                suggestionsField.style.borderColor = "#e11d48";
+            } else {
+                suggestionsField.required = false;
+                suggestionsField.placeholder = "Any suggestions?";
+                suggestionsField.style.borderColor = "var(--border)";
+            }
+        }
+
+        document.querySelectorAll('input[type="radio"]').forEach(radio => {
+            radio.addEventListener('change', toggleSuggestionsRequired);
+        });
     </script>
-</body>
-</html>
 </body>
 </html>

@@ -2,11 +2,14 @@ from django.shortcuts import render, redirect
 from django.http import JsonResponse
 from form.models import Student, Attendance
 from django.contrib import messages
+from django.db import models
 from dashboard.models import Trainer
 from .models import Feedback
 
 def feedback_form(request, phase=None):
-    trainers = Trainer.objects.all().order_by('name')
+    # Get branch from query params
+    branch_filter = request.GET.get('branch', 'Vikaspuri')
+    trainers = Trainer.objects.filter(branch=branch_filter).order_by('name')
     
     # Phase normalization
     phase_map = {
@@ -26,9 +29,9 @@ def feedback_form(request, phase=None):
             student_name = request.POST.get('student_name')
             email = request.POST.get('email')
             phone = request.POST.get('phone')
-            branch = request.POST.get('branch', 'Vikaspuri')
+            branch = request.POST.get('branch', branch_filter)
             trainer_name = request.POST.get('trainer_name')
-            technology = request.POST.get('technology')
+            technology = request.POST.get('batch_name') or request.POST.get('technology')
             
             # Legacy handling for old templates if any
             hour = request.POST.get('hour')
@@ -39,8 +42,8 @@ def feedback_form(request, phase=None):
             form_phase = mapped_phase if mapped_phase else request.POST.get('phase', 'P-1')
             
             # Check for duplicate
-            if Feedback.objects.filter(student_id=student_id, phase=form_phase, trainer_name=trainer_name).exists():
-                 messages.error(request, f'You have already submitted {form_phase} feedback for {trainer_name}!')
+            if Feedback.objects.filter(student_id=student_id, phase=form_phase, technology=technology).exists():
+                 messages.error(request, f'You have already submitted {form_phase} feedback for {technology}!')
                  if phase: return redirect('feedback_phase', phase=phase)
                  return redirect('feedback_form')
 
@@ -86,40 +89,53 @@ def feedback_form(request, phase=None):
     phase_label = phase_labels.get(mapped_phase, 'P-1 (Orientation & Basics)')
     
     # Pre-fetch all batches grouped by technology for dynamic frontend selection
+    from django.utils import timezone
     from dashboard.models import Batch
     import json
     
-    # 1. Fetch ALL active batches
-    batches = Batch.objects.select_related('trainer').all()
+    today = timezone.localdate()
+    # 1. Fetch active batches for the selected branch
+    batches = Batch.objects.select_related('trainer').filter(
+        models.Q(status='Active') & 
+        models.Q(trainer__branch=branch_filter) &
+        (models.Q(end_date__gte=today) | models.Q(end_date__isnull=True))
+    )
     
-    # 2. Derive technology choices from BOTH the static list and actual Batch records
-    # Normalize to Uppercase for consistent matching
-    batch_techs = set(b.batch_name.upper() for b in batches if b.batch_name)
-    static_techs = set(tech.upper() for tech in dict(Attendance.TECHNOLOGY_CHOICES).keys())
+    # 2. Use static technology choices globally
+    dynamic_tech_choices = Attendance.TECHNOLOGY_CHOICES
     
-    # Merge and sort
-    all_techs = sorted(list(batch_techs | static_techs))
-    dynamic_tech_choices = [(tech, tech) for tech in all_techs]
+    # 3. Group batches by their technology (Fuzzy matching with static choices)
+    batch_data = {t[0]: [] for t in dynamic_tech_choices}
     
-    # 3. Group batches by their technology (normalized to uppercase)
-    # Mapping by BOTH Batch Name AND Trainer Course to ensure "DATA SCIENCE" finds Python/ML batches
-    batch_data = {}
     for b in batches:
-        tech_keys = set()
-        if b.batch_name: tech_keys.add(b.batch_name.upper())
-        if b.trainer and b.trainer.course: tech_keys.add(b.trainer.course.upper())
+        b_techs = []
+        if b.batch_name: b_techs.append(b.batch_name.upper())
+        if b.trainer and b.trainer.course: b_techs.append(b.trainer.course.upper())
         
-        for tech in tech_keys:
-            if tech not in batch_data:
-                batch_data[tech] = []
-            
-            # Avoid duplicate batch entries under same tech
-            batch_data[tech].append({
-                'id': b.id,
-                'trainer': b.trainer.name,
-                'timing': b.timing,
-                'type': b.batch_type
-            })
+        # Match batch against ALL possible static tech choices
+        for tech_val, _ in dynamic_tech_choices:
+            is_match = False
+            for bt in b_techs:
+                # Fuzzy match: "DATA ANALYTICS" matches "DATA ANALYTICS & AI"
+                if bt in tech_val or tech_val in bt:
+                    is_match = True
+                    break
+                # Special cases for course mapping
+                if "MERN" in bt and "MERN" in tech_val: is_match = True
+                if "JAVA" in bt and "JAVA" in tech_val: is_match = True
+                if "MACHINE LEARNING" in bt and "DATA SCIENCE" in tech_val: is_match = True
+                if "DATA SCIENCE" in bt and "MACHINE LEARNING" in tech_val: is_match = True
+                
+            if is_match:
+                # Avoid duplicate batch entries under same tech
+                if not any(exist_b['id'] == b.id for exist_b in batch_data[tech_val]):
+                    batch_data[tech_val].append({
+                        'id': b.id,
+                        'batch_name': b.batch_name,
+                        'trainer': b.trainer.name,
+                        'timing': b.timing,
+                        'type': b.batch_type
+                    })
 
     context = {
         'trainers': trainers,
@@ -127,6 +143,7 @@ def feedback_form(request, phase=None):
         'selected_phase': mapped_phase,
         'phase_label': phase_label,
         'batch_data_json': json.dumps(batch_data),
+        'active_branch': branch_filter,
     }
     
     # Template selection mapping
@@ -145,17 +162,22 @@ def get_student_details(request):
     if sid:
         try:
             student = Student.objects.filter(sid=sid).first()
+            print(student)
             if not student: student = Student.objects.filter(sid__icontains=sid).first()
             
             trainer = request.GET.get('trainer', '')
             phase = request.GET.get('phase', '')
             
             existing_fb = None
-            if student and trainer and phase:
-                existing_fb = Feedback.objects.filter(student_id=student.sid, trainer_name=trainer, phase=phase).first()
+            if student and phase:
+                # If trainer not provided, try to find it from student's current batch
+                search_trainer = trainer or (student.current_batch.trainer.name if student.current_batch else None)
+                if search_trainer:
+                    existing_fb = Feedback.objects.filter(student_id=student.sid, trainer_name=search_trainer, phase=phase).first()
             
             if student:
                 data = {
+                    'id':student.sid,
                     'status': 'success',
                     'name': student.name,
                     'course': student.course.upper() if student.course else '',

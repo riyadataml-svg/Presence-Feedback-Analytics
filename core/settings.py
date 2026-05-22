@@ -25,7 +25,14 @@ SECRET_KEY = 'django-insecure-@!ckdk#p5-ffmmqrhey55e3%2hwx+m1jhzilefzvpu%*y#+vtt
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['*']
+
+CSRF_TRUSTED_ORIGINS = [
+    'http://localhost:8000',
+    'http://127.0.0.1:8000',
+    'http://localhost:8001',
+    'http://127.0.0.1:8001',
+]
 
 
 # Application definition
@@ -125,6 +132,15 @@ LOGIN_REDIRECT_URL = 'index'
 LOGOUT_REDIRECT_URL = 'login_view'
 LOGIN_URL = 'login_view'
 
-# # WATI WhatsApp API Settings
-# WATI_BASE_URL = 'https://live-server-url.wati.io' # Replace with your WATI Base URL
-# WATI_API_TOKEN = 'your-api-token-here'             # Replace with your WATI Access Token
+# Email Settings (for Gmail)
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = 'amanducatvikaspuri@gmail.com'
+EMAIL_HOST_PASSWORD = 'wpqv kxcr vbdy vdbh'
+DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
+
+# Default primary key field type
+# https://docs.djangoproject.com/en/6.0/ref/settings/#default-auto-field
+DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'

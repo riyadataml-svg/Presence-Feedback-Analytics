@@ -193,7 +193,7 @@
             <div class="grid-row">
                 <div class="form-group">
                     <label>Contact Phone</label>
-                    <input type="text" name="phone" id="id_phone" class="input-control" placeholder="+91 XXXX-XXXXXX">
+                    <input type="text" name="phone" id="id_phone" class="input-control" placeholder="9876543210" maxlength="10" minlength="10" pattern="\d{10}" title="Please enter exactly 10 digits" oninput="this.value = this.value.replace(/[^0-9]/g, '').slice(0,10)">
                 </div>
             </div>
 
@@ -233,12 +233,21 @@
             </div>
 
             <input type="hidden" name="batch_timing" id="id_batch_timing">
-            <input type="hidden" name="batch_mode" id="id_batch_mode">
+            <input type="hidden" name="batch_name" id="id_batch_name">
 
-            <div class="form-group">
-                <label>Training Phase <span>*</span></label>
-                <input type="text" class="input-control" readonly style="background: #f1f5f9; cursor: not-allowed; color: #1e293b; font-weight: 600;" value="P-3 (Project Progress)">
-                <input type="hidden" name="phase" value="P-3" id="phase_select">
+            <div class="grid-row">
+                <div class="form-group">
+                    <label>Training Phase <span>*</span></label>
+                    <input type="text" class="input-control" readonly style="background: #f1f5f9; cursor: not-allowed; color: #1e293b; font-weight: 600;" value="P-3 (Project Progress)">
+                    <input type="hidden" name="phase" value="P-3" id="phase_select">
+                </div>
+                <div class="form-group">
+                    <label>Training Mode <span>*</span></label>
+                    <select name="batch_mode" id="id_batch_mode" class="input-control" required>
+                        <option value="Offline">Offline (Classroom)</option>
+                        <option value="Online">Online (Live Class)</option>
+                    </select>
+                </div>
             </div>
 
             <div style="margin: 30px 0 20px;"><h3 style="font-size: 1rem; color: var(--primary); font-weight: 800; border-left: 4px solid var(--accent-glow); padding-left: 15px; text-transform: uppercase;">PROJECT PROGRESS ASSESSMENT</h3></div>
@@ -320,7 +329,7 @@
                 allBatches[selectedTech].forEach(b => {
                     const opt = document.createElement('option');
                     opt.value = encodeURIComponent(JSON.stringify(b));
-                    opt.textContent = `${b.trainer} | ${b.timing} (${b.type})`;
+                    opt.textContent = `${b.batch_name} (${b.type}) | ${b.timing}`;
                     batchSelect.appendChild(opt);
                     
                     if (autoSelectedBatchData && 
@@ -345,6 +354,7 @@
                     trainerInput.value = b.trainer;
                     batchTypeInput.value = b.type;
                     batchTimingInput.value = b.timing;
+                    if (document.getElementById('id_batch_name')) document.getElementById('id_batch_name').value = b.batch_name;
                     if (batchModeInput) batchModeInput.value = b.type.toLowerCase().includes('online') ? 'Online' : 'Offline';
                     document.getElementById('batch_info_display').innerText = `✅ Assigned: ${b.trainer} - ${b.timing}`;
                 } catch(e) { console.error(e); }
@@ -352,6 +362,7 @@
                 trainerInput.value = '';
                 batchTypeInput.value = '';
                 batchTimingInput.value = '';
+                if (document.getElementById('id_batch_name')) document.getElementById('id_batch_name').value = '';
                 document.getElementById('batch_info_display').innerText = '';
             }
         }
@@ -431,6 +442,31 @@
                 document.getElementById('wordcount').style.color = 'inherit';
             }
         }
+        function toggleSuggestionsRequired() {
+            const ratings = document.querySelectorAll('input[type="radio"]:checked');
+            const suggestionsField = document.getElementById('id_suggestions');
+            let needsComment = false;
+            
+            ratings.forEach(radio => {
+                if (parseInt(radio.value) < 5) {
+                    needsComment = true;
+                }
+            });
+            
+            if (needsComment) {
+                suggestionsField.required = true;
+                suggestionsField.placeholder = "Please explain the reason for the lower rating (Required)*";
+                suggestionsField.style.borderColor = "#e11d48";
+            } else {
+                suggestionsField.required = false;
+                suggestionsField.placeholder = "Mention any challenges in your current project modules.";
+                suggestionsField.style.borderColor = "var(--border)";
+            }
+        }
+
+        document.querySelectorAll('input[type="radio"]').forEach(radio => {
+            radio.addEventListener('change', toggleSuggestionsRequired);
+        });
     </script>
 </body>
 </html>

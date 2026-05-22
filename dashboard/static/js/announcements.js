@@ -419,7 +419,7 @@ function openStudentRoster() {
     modal.style.display = 'flex';
     
     // Auto-sync with main dashboard course filter
-    const globalCourse = document.getElementById('courseFilter').value;
+    const globalCourse = document.getElementById('technologyFilter').value;
     const rosterFilter = document.getElementById('rosterCourseFilter');
     
     if (globalCourse && rosterFilter) {
@@ -442,7 +442,7 @@ function filterRoster() {
     tbody.innerHTML = '';
     
     const filtered = students.filter(s => {
-        const matchesCourse = courseFilter === '' || s.course === courseFilter;
+        const matchesCourse = courseFilter === '' || s.technology === courseFilter;
         const matchesSearch = s.name.toLowerCase().includes(searchVal) || s.sid.toLowerCase().includes(searchVal);
         return matchesCourse && matchesSearch;
     });
@@ -456,11 +456,13 @@ function filterRoster() {
         const row = document.createElement('tr');
         row.style.borderBottom = '1px solid rgba(255,255,255,0.05)';
         row.innerHTML = `
-            <td style="padding:15px 20px; font-weight:800; color:var(--primary);">${s.sid}</td>
-            <td style="padding:15px 20px; font-weight:700; color:white;">${s.name}</td>
+            <td style="padding:15px 20px; font-weight:800; color:var(--primary); cursor:pointer; text-decoration:underline;" onclick="openStudentProfile('${s.sid}', '${s.name.replace(/'/g, "\\'")}')" title="View Full Profile">${s.sid}</td>
+            <td style="padding:15px 20px; font-weight:700; color:white; cursor:pointer;" onclick="openStudentProfile('${s.sid}', '${s.name.replace(/'/g, "\\'")}')">
+                <span style="border-bottom: 1px dashed rgba(255,255,255,0.4); padding-bottom: 2px;">${s.name}</span>
+            </td>
             <td style="padding:15px 20px; font-size:0.8rem; color:white;">${s.phone}</td>
             <td style="padding:15px 20px; font-size:0.75rem; color:#a5b4fc;">${s.email}</td>
-            <td style="padding:15px 20px;"><span style="background:rgba(99, 102, 241, 0.1); color:#818cf8; padding:4px 10px; border-radius:30px; font-size:0.7rem; font-weight:800;">${s.course}</span></td>
+            <td style="padding:15px 20px;"><span style="background:rgba(99, 102, 241, 0.1); color:#818cf8; padding:4px 10px; border-radius:30px; font-size:0.7rem; font-weight:800;">${s.technology}</span></td>
             <td style="padding:15px 20px;">
                 <button onclick="sendSingleWhatsApp('${s.phone}', '${s.name}')" 
                     style="background:#25d366; color:white; border:none; padding:6px 12px; border-radius:6px; cursor:pointer; font-size:0.7rem; font-weight:800; display:flex; align-items:center; gap:5px;">
