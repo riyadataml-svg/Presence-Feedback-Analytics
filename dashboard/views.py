@@ -173,7 +173,10 @@ def check_and_send_batch_notifications():
             )
             
             batch.email_sent = True
-            batch.save()
+            try:
+                batch.save()
+            except Exception as e:
+                print(f"Vercel Read-Only DB: Could not save batch {batch.id}")
             print(f"Sent end notification for batch {batch.id}")
     except Exception as e:
         print(f"Error checking batch notifications: {e}")
@@ -211,8 +214,12 @@ def index(request):
     
     # CLEANUP: Remove orphaned data that no longer has a matching Student record (User Request)
     existing_sids = set(Student.objects.values_list('sid', flat=True))
-    Attendance.objects.exclude(student_id__in=existing_sids).delete()
-    Feedback.objects.exclude(student_id__in=existing_sids).delete()
+    try:
+        Attendance.objects.exclude(student_id__in=existing_sids).delete()
+        Feedback.objects.exclude(student_id__in=existing_sids).delete()
+    except Exception as e:
+        print(f"Vercel Read-Only DB: Cleanup skipped. {e}")
+
     
     trainers = Trainer.objects.prefetch_related('batches').filter(branch=branch_filter)
     
