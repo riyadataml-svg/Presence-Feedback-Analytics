@@ -331,7 +331,7 @@
                 allBatches[selectedTech].forEach(b => {
                     const opt = document.createElement('option');
                     opt.value = encodeURIComponent(JSON.stringify(b));
-                    opt.textContent = `${b.batch_name} (${b.type}) | ${b.timing}`;
+                    opt.textContent = `${b.batch_name} (${b.type}) | ${b.timing} - ${b.trainer}`;
                     batchSelect.appendChild(opt);
                     
                     if (autoSelectedBatchData && 
