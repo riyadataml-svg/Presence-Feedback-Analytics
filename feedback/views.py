@@ -94,12 +94,14 @@ def feedback_form(request, phase=None):
     import json
     
     today = timezone.localdate()
-    # 1. Fetch active batches for the selected branch
-    batches = Batch.objects.select_related('trainer').filter(
+    # 1. Fetch active batches for the selected branch (Using same logic as dashboard to prevent mismatches)
+    all_branch_batches = Batch.objects.select_related('trainer').filter(
         models.Q(status='Active') & 
-        models.Q(trainer__branch=branch_filter) &
-        (models.Q(end_date__gte=today) | models.Q(end_date__isnull=True))
+        models.Q(trainer__branch=branch_filter)
     )
+    
+    batches = [b for b in all_branch_batches if not b.end_date or b.end_date >= today]
+
     
     # 2. Use static technology choices globally
     dynamic_tech_choices = Attendance.TECHNOLOGY_CHOICES
